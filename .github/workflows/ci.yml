@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: cachix/cachix-action@v15
+        with:
+          name: logos-co
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+
+      - name: Build plugin and package
+        run: nix build -L .#lgx
+
+  qml:
+    # `nix build` proves NOTHING about the QML: mkLogosQmlModule only copies
+    # src/qml, so a green build is perfectly compatible with `import
+    # Logos.Thmee` — and an unresolved import takes the whole view down at
+    # runtime, with the only useful message going to the host's stderr. These
+    # are the two pre-flight gates from the README.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The design system is NOT a flake input: it is static-linked into the
+      # host binary, so the plugin declares nothing. Its SOURCE tree is still
+      # what qmllint needs to resolve Logos.* — checked out here rather than
+      # added to the lock for a lint's sake.
+      - uses: actions/checkout@v4
+        with:
+          repository: logos-co/logos-design-system
+          path: .design-system
+
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: cachix/cachix-action@v15
+        with:
+          name: logos-co
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+
+      - name: Gate A — static (imports, type and property names)
+        run: |
+          nix shell nixpkgs#qt6.qtdeclarative -c bash -c '
+            QTQML=$(dirname $(dirname $(readlink -f $(command -v qmllint))))/lib/qt-6/qml
+            qmllint -I "$QTQML" -I .design-system/src/qml \
+                    -W 0 --unqualified disable src/qml/TokenListView.qml'
+
+      - name: Gate B — instantiate every component for real
+        run: |
+          nix shell nixpkgs#qt6.qtdeclarative nixpkgs#qt6.qtsvg -c bash -c '
+            QTQML=$(dirname $(dirname $(readlink -f $(command -v qmllint))))/lib/qt-6/qml
+            # Basic is load-bearing: under a platform style the design system'"'"'s
+            # own contentItem overrides are REJECTED, which reads as a bug in
+            # this panel. Both hosts force it; a bare `qml` does not.
+            QT_QUICK_CONTROLS_STYLE=Basic QT_QPA_PLATFORM=offscreen \
+              timeout 60 qml -I "$QTQML" -I .design-system/src/qml src/qml/TokenListView.qml \
+              > /tmp/qml.log 2>&1
+            status=$?
+            cat /tmp/qml.log
+            # 124 IS THE PASS. The view is an Item, not a Window, so a healthy
+            # load runs the event loop until timeout kills it; measured, qml
+            # exits 2 for a bad import and for an unknown property, and only
+            # reaches 124 when every component constructed.
+            if [ $status -ne 124 ]; then
+              echo "::error::qml exited $status (expected 124 = loaded and still running)"
+              exit 1
+            fi
+            # Style-customization rejections arrive as qWarnings and would not
+            # have changed the exit code.
+            if grep -qE "does not support customization|Cannot assign|was not found" /tmp/qml.log; then
+              echo "::error::QML component errors above"; exit 1
+            fi'
