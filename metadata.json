@@ -1,0 +1,20 @@
+{
+  "name": "token_list_ui",
+  "display_name": "Token Lists",
+  "version": "0.1.0",
+  "type": "ui_qml",
+  "interface": "universal",
+  "category": "wallet",
+  "description": "Device-wide token metadata: the built-in offline list, extra list URLs, and your own custom tokens, shared by every Logos wallet on this device.",
+  "author": "Logos Core Team",
+  "main": "token_list_ui_plugin",
+  "icon": "src/icons/token_list.png",
+  "view": "qml/TokenListView.qml",
+  "dependencies": ["token_list_module"],
+  "codegen": { "rep": "src/token_list_ui.rep" },
+  "nix": {
+    "external_libraries": [],
+    "packages": { "build": [], "runtime": ["qt6.qtdeclarative"] },
+    "cmake": { "find_packages": [], "extra_sources": [], "extra_include_dirs": [], "extra_link_libraries": [] }
+  }
+}
