@@ -1,0 +1,59 @@
+// The QML-facing surface of token_list_module's configuration and its token store.
+//
+// This app configures a DEVICE-WIDE store shared with every Logos wallet. It holds no key
+// material, makes no transaction and shows no balance — token metadata only.
+//
+// get_all_tokens() is 360,569 bytes on the shipped list, and a PROP re-emits its whole string
+// on every change. So the view NEVER receives the whole list: the backend filters and
+// paginates, and only one page crosses.
+class TokenListUi
+{
+    PROP(QString statusText="Starting" READONLY)
+    PROP(QString lastError="" READONLY)
+    PROP(bool busy=false READONLY)
+
+    // token_list's own answer to "are you configured":
+    // { ok, state, source?, config?, counts?: { embedded, downloaded, custom }, error? }
+    // `state` is the machine-readable discriminator — unready / unconfigured / configured.
+    // "unready" is "ask again in a moment", never "no config".
+    PROP(QString statusJson="{}" READONLY)
+
+    // Chains the loaded data covers: [{ chainId, name?, count }].
+    // `name` is ABSENT for an id this app has no name for — never guessed.
+    PROP(QString chainsJson="[]" READONLY)
+    PROP(int selectedChainId=0 READONLY)
+
+    // ONE PAGE for the selected chain + current filter:
+    // { total, offset, limit, rows: [{ address, name, symbol, decimals, source }] }
+    // `logoURI` is dropped here, in the backend, so the view cannot render a remote image
+    // the ui_qml sandbox would refuse anyway.
+    PROP(QString pageJson="{}" READONLY)
+    PROP(QString filterText="" READONLY)
+
+    // Per-URL fetch status from get_list_sources: [{ url, name, tokenCount, ok, error? }].
+    // EMPTY until a refresh has run in this process — token_list does not persist it.
+    PROP(QString sourcesJson="[]" READONLY)
+    // The last MANUAL refresh: { ok, tokenCount?, error?, at }. Empty until one is run.
+    PROP(QString refreshJson="{}" READONLY)
+
+    SLOT(void refresh())                       // re-read from token_list. NO network.
+    SLOT(void selectChain(int chainId))
+    SLOT(void setFilter(QString text))
+    SLOT(void setPage(int offset, int limit))
+
+    SLOT(void addCustomToken(QString tokenJson))
+    SLOT(void removeCustomToken(int chainId, QString address))
+    SLOT(void importCustomTokens(QString listJson, bool replace))
+
+    SLOT(void setUseEmbeddedList(bool on))     // one field, one write
+    SLOT(void addListUrl(QString url))         // STORES a URL. Fetches nothing.
+    SLOT(void removeListUrl(QString url))
+    SLOT(void setProxy(QString proxyUrl, bool required))
+    SLOT(void setTimeout(int timeoutSecs))
+
+    // The ONLY method here that touches the network, and only on a human press.
+    // ASYNC: a dead list URL costs the full transport timeout.
+    SLOT(void refreshNow())
+
+    SLOT(void initDefaults())                  // shown only while state == "unconfigured"
+}
