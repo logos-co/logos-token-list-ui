@@ -11,6 +11,9 @@
   "icon": "src/icons/token_list.png",
   "view": "qml/TokenListView.qml",
   "dependencies": ["token_list_module"],
+  "provides": [
+    { "intent": "evm.token_lists.configure", "handoff": true }
+  ],
   "codegen": { "rep": "src/token_list_ui.rep" },
   "nix": {
     "external_libraries": [],
