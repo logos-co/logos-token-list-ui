@@ -36,6 +36,14 @@ Item {
         function onViewModuleReadyChanged(moduleName, isReady) {
             if (moduleName === "token_list_ui") root.ready = isReady && root.backend !== null
         }
+
+        // The lists and custom tokens are DEVICE-WIDE, so a wallet reports what it is using
+        // and sends the user here to change it. Being brought here IS the request, so answer
+        // at once; `handoff: true` leaves them here rather than bouncing them back.
+        function onIntentRequested(requestId, intent, params, requesterName) {
+            if (intent !== "evm.token_lists.configure") return
+            logos.respond(requestId, true, ({}), "")
+        }
     }
 
     function j(text, fallback) {
