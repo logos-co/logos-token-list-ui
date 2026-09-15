@@ -17958,11 +17958,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789477403,
-        "narHash": "sha256-ggNnRZqlxlyvKEKMNB5vQSciN5gaHYzigiNKSRIQ1TI=",
+        "lastModified": 1789483494,
+        "narHash": "sha256-94FPAFWqAAdg9Vj3eEDa0RCm+69nny3VkblxQifaWiI=",
         "owner": "logos-co",
         "repo": "logos-evm-token-list-module",
-        "rev": "588253f7bd070694183aaa21ca4e15aa7e0401ca",
+        "rev": "b4e9d30817ddcd7e391fc40f865d96f53c762b06",
         "type": "github"
       },
       "original": {
