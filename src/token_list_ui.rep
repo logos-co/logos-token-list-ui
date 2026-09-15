@@ -1,7 +1,8 @@
-// The QML-facing surface of token_list_module's configuration and its token store.
+// The QML-facing surface of token_list_module's configuration, catalogue and enabled set.
 //
 // This app configures a DEVICE-WIDE store shared with every Logos wallet. It holds no key
-// material, makes no transaction and shows no balance — token metadata only.
+// material, makes no transaction and shows no balance. Enabling a catalogue row makes that
+// ERC-20 available to every wallet on this device.
 //
 // get_all_tokens() is 360,569 bytes on the shipped list, and a PROP re-emits its whole string
 // on every change. So the view NEVER receives the whole list: the backend filters and
@@ -24,7 +25,8 @@ class TokenListUi
     PROP(int selectedChainId=0 READONLY)
 
     // ONE PAGE for the selected chain + current filter:
-    // { total, offset, limit, rows: [{ address, name, symbol, decimals, source }] }
+    // { revision, total, offset, limit,
+    //   rows: [{ address, name, symbol, decimals, source, enabled, builtin }] }
     // `logoURI` is dropped here, in the backend, so the view cannot render a remote image
     // the ui_qml sandbox would refuse anyway.
     PROP(QString pageJson="{}" READONLY)
@@ -40,6 +42,7 @@ class TokenListUi
     SLOT(void selectChain(int chainId))
     SLOT(void setFilter(QString text))
     SLOT(void setPage(int offset, int limit))
+    SLOT(void setTokenEnabled(int chainId, QString address, bool enabled))
 
     SLOT(void addCustomToken(QString tokenJson))
     SLOT(void removeCustomToken(int chainId, QString address))

@@ -84,6 +84,8 @@ QJsonObject pageRow(const QJsonObject &token)
         {QStringLiteral("symbol"), token.value(QStringLiteral("symbol")).toString()},
         {QStringLiteral("decimals"), token.value(QStringLiteral("decimals")).toInt()},
         {QStringLiteral("source"), token.value(QStringLiteral("source")).toString()},
+        {QStringLiteral("enabled"), token.value(QStringLiteral("enabled")).toBool()},
+        {QStringLiteral("builtin"), token.value(QStringLiteral("builtin")).toBool()},
     };
 }
 
@@ -267,6 +269,7 @@ void TokenListUiBackend::publishPage()
         rows.append(matched.at(i));
 
     setPageJson(compact(QJsonObject{
+        {QStringLiteral("revision"), ++m_pageRevision},
         {QStringLiteral("total"), total},
         {QStringLiteral("offset"), m_offset},
         {QStringLiteral("limit"), m_limit},
@@ -297,6 +300,22 @@ void TokenListUiBackend::setPage(int offset, int limit)
     m_offset = std::max(0, offset);
     m_limit = std::clamp(limit, 1, 500);
     publishPage();
+}
+
+void TokenListUiBackend::setTokenEnabled(int chainId, QString address, bool enabled)
+{
+    if (chainId <= 0 || address.isEmpty() || busy())
+        return;
+
+    setLastError(QString());
+    setBusy(true);
+    const QString reply = modules().token_list_module.set_token_enabled(chainId, address, enabled);
+    if (!failed(reply, QStringLiteral("token membership")))
+        reloadRows();
+    else
+        // Re-publish the stored value so a refused switch snaps back immediately.
+        publishPage();
+    setBusy(false);
 }
 
 QStringList TokenListUiBackend::listUrls() const

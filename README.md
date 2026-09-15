@@ -1,8 +1,8 @@
 # logos-token-list-ui
 
 Basecamp panel for [`token_list_module`](https://github.com/logos-co/logos-evm-token-list-module):
-the token metadata store — the list built into the module, extra list URLs, and your own
-custom tokens.
+the device-wide token catalogue and enabled ERC-20 set — the list built into the module, extra
+list URLs, your own custom tokens, and the membership shared by every wallet.
 
 A `ui_qml` module — a QML view (`src/qml/TokenListView.qml`) over a small C++ backend
 (`src/token_list_ui_backend.{h,cpp}`) whose QML-facing surface is the QtRO contract in
@@ -10,22 +10,22 @@ A `ui_qml` module — a QML view (`src/qml/TokenListView.qml`) over a small C++ 
 
 ```bash
 git add -A   # nix only sees git-tracked files
-nix build '.#lgx' --override-input token_list_module path:../token-list-module
+nix build '.#lgx'
 ```
-See **Build** below for why the override is required today.
 
 ## Why this is its own app and not a page in the wallet
 
-`token_list_module` persists its config and its token buckets in *its* instance directory, and
-that store is **device-wide**: every Logos wallet on the device decorates its rows from it. The
-wallet is not supposed to configure it — it asks whether the module is configured and, only if
-nothing is, applies the module's own defaults. Everything past that default — a second list
-URL, a Tor proxy, a token the wallet's allowlist does not carry — belongs here.
+`token_list_module` persists its config, catalogue buckets and enabled-token snapshots in *its*
+instance directory, and that store is **device-wide**: every Logos wallet on the device reads
+its offered ERC-20s from it. The wallet is not supposed to configure it — it asks whether the
+module is configured and, only if nothing is, applies the module's own defaults. Everything
+past that default — a second list URL, a Tor proxy, or which catalogue tokens wallets should
+offer — belongs here.
 
 The wallet therefore never needs this app installed. That is the point of the split: a fresh
 device works offline with the built-in list, and this panel is where someone goes to change it.
 
-## Seven decisions worth knowing
+## Eight decisions worth knowing
 
 **"Starting" is not "not configured".** The panel reads `config_status()`, whose `state` is
 `unready` / `unconfigured` / `configured`. `unready` means token_list has not finished starting;
@@ -38,6 +38,14 @@ prevent, and a bool cannot express the difference.
 list, and a `PROP(QString)` re-emits its entire string on every change. So the backend holds the
 selected chain's rows, filters and paginates them, and publishes **one page** in `pageJson`. The
 chain roster and its per-chain counts come from a single `get_all_tokens()` read on reload.
+
+**Enabled tokens are complete snapshots, not loose addresses.** A switch calls
+`set_token_enabled(chainId, address, enabled)` on `token_list_module`. Enabling copies the
+catalogue row into `enabled_tokens.json`, preserving symbol, name and—most importantly—decimals
+if a downloaded list later changes or disappears. The module's pinned built-ins render checked
+and disabled because it refuses to turn them off. A refused change republishes the stored page
+with a fresh revision immediately, so the switch cannot lie about the result even when every
+row is otherwise byte-identical.
 
 **Every config write is one field.** `setUseEmbeddedList`, `addListUrl`, `removeListUrl`,
 `setProxy` and `setTimeout` each call `configure` with a `ListConfigWire` carrying exactly the
@@ -56,8 +64,8 @@ a latch — a callback that never fires must not wedge the button shut for good.
 **`logoURI` is dropped in the backend, not hidden in the view.** 1,502 of the 1,709 shipped
 tokens carry one, 11 of them `ipfs://`. A `ui_qml` view's sandbox refuses remote fetches and the
 only trace is HTTP 0 plus one line in the *host* log — an invisible failure on 88% of rows. The
-backend emits five keys per row and `logoURI` is not one of them, so the view cannot render it
-by accident.
+backend emits the seven display and membership keys it needs per row and `logoURI` is not one
+of them, so the view cannot render it by accident.
 
 **Every token string renders as `Text.PlainText`.** `LogosText` is a bare `Text` with no
 `textFormat`, i.e. Qt's AutoText HTML autodetection. Six tokens in the shipped list already
@@ -96,12 +104,7 @@ a stale "Ready" on screen.
 green `ws build` here proves nothing. Build directly:
 
 ```bash
-nix build '.#lgx' --override-input token_list_module path:../token-list-module
+nix build '.#lgx'
 ```
 
 `nix` only sees git-tracked files: `git add -A` before every build.
-
-The override is **required**, not a convenience: the rev in `flake.lock` predates the
-initialization convention, so a bare `nix build` has no `config_status`, `init_defaults` or
-`import_custom_tokens` to compile against, and no `useEmbeddedList` in its config. Re-lock once
-that work is pushed.
