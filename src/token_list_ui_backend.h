@@ -42,9 +42,9 @@ private:
 
 // The Token Lists panel's backend.
 //
-// token_list_module persists its config and its token buckets in its own instance directory,
-// and that store is DEVICE-WIDE: every Logos wallet on this device decorates its rows from it.
-// Nothing here reaches an account, a balance or a key.
+// token_list_module persists its config, catalogue and enabled set in its own instance
+// directory. That store is DEVICE-WIDE: every Logos wallet on this device reads its offered
+// ERC-20s from it. Nothing here reaches an account, a balance or a key.
 class TokenListUiBackend : public TokenListUiSimpleSource,
                            public LogosUiPluginContext
 {
@@ -53,6 +53,7 @@ public:
     void selectChain(int chainId) override;
     void setFilter(QString text) override;
     void setPage(int offset, int limit) override;
+    void setTokenEnabled(int chainId, QString address, bool enabled) override;
 
     void addCustomToken(QString tokenJson) override;
     void removeCustomToken(int chainId, QString address) override;
@@ -95,6 +96,9 @@ private:
 
     QJsonObject m_status;
     QJsonArray m_rows;
+    /// Makes every explicit reload observable even when the rows are byte-identical. This is
+    /// what lets a refused user toggle restore the authoritative stored value in QML.
+    qint64 m_pageRevision = 0;
     int m_offset = 0;
     int m_limit = 25;
 

@@ -5,7 +5,7 @@
   "type": "ui_qml",
   "interface": "universal",
   "category": "wallet",
-  "description": "Device-wide token metadata: the built-in offline list, extra list URLs, and your own custom tokens, shared by every Logos wallet on this device.",
+  "description": "Device-wide token catalogue and enabled set: built-in defaults, extra list URLs, custom tokens, and the ERC-20s shared by every Logos wallet on this device.",
   "author": "Logos Core Team",
   "main": "token_list_ui_plugin",
   "icon": "src/icons/token_list.png",

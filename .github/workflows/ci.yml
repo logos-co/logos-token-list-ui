@@ -46,6 +46,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Gate 0 — token membership stays in this app
+        run: python3 doctests/assert_ui.py
+
       # The design system is NOT a flake input: it is static-linked into the
       # host binary, so the plugin declares nothing. Its SOURCE tree is still
       # what qmllint needs to resolve Logos.* — checked out here rather than

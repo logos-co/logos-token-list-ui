@@ -37,9 +37,9 @@ Item {
             if (moduleName === "token_list_ui") root.ready = isReady && root.backend !== null
         }
 
-        // The lists and custom tokens are DEVICE-WIDE, so a wallet reports what it is using
-        // and sends the user here to change it. Being brought here IS the request, so answer
-        // at once; `handoff: true` leaves them here rather than bouncing them back.
+        // The catalogue and enabled set are DEVICE-WIDE, so a wallet sends the user here to
+        // change membership. Being brought here IS the request, so answer at once;
+        // `handoff: true` leaves them here rather than bouncing them back.
         function onIntentRequested(requestId, intent, params, requesterName) {
             if (intent !== "evm.token_lists.configure") return
             logos.respond(requestId, true, ({}), "")
@@ -163,9 +163,9 @@ Item {
             wrapMode: Text.WordWrap
             color: Theme.palette.textSecondary
             font.pixelSize: Theme.typography.secondaryText
-            text: "Token names, symbols and decimals are stored once for this device and used "
-                + "by every Logos wallet on it. This is metadata only — it can never add a "
-                + "token to a wallet that does not already offer it."
+            text: "The token catalogue and enabled set are stored once for this device and "
+                + "shared by every Logos wallet on it. Turn on an ERC-20 here to make it "
+                + "available in those wallets. Built-in tokens stay enabled."
         }
 
         LogosText {
@@ -339,6 +339,11 @@ Item {
                         LogosTableColumn {
                             title: "From"; role: "source"; minWidth: 110; preferredWidth: 120
                             cellDelegate: sourceCell
+                        },
+                        LogosTableColumn {
+                            title: "Enabled"; role: "enabled"; minWidth: 100; preferredWidth: 100
+                            alignment: Qt.AlignHCenter | Qt.AlignVCenter
+                            cellDelegate: enabledCell
                         },
                         LogosTableColumn {
                             title: ""; role: "source"; minWidth: 90; preferredWidth: 90
@@ -677,8 +682,8 @@ Item {
                                 font.pixelSize: Theme.typography.secondaryText
                                 text: "Nothing here is verified against the chain. A wrong "
                                     + "decimals value makes every balance shown for that token "
-                                    + "wrong by a factor of ten, and a wallet still decides for "
-                                    + "itself whether it offers the token at all."
+                                    + "wrong by a factor of ten. After adding it, enable the "
+                                    + "token from the Tokens tab to offer it to wallets."
                             }
                         }
                     }
@@ -755,6 +760,21 @@ Item {
                 text: "Remove"
                 enabled: root.ready && !root.backend.busy
                 onClicked: root.backend.removeCustomToken(root.selectedChainId, rowItem.address)
+            }
+        }
+    }
+
+    Component {
+        id: enabledCell
+        Item {
+            LogosSwitch {
+                anchors.centerIn: parent
+                objectName: rowItem ? "tokenEnabled_" + rowItem.address : "tokenEnabled"
+                text: rowItem && rowItem.builtin ? "Built in" : ""
+                checked: rowItem && rowItem.enabled === true
+                enabled: root.ready && !root.backend.busy && rowItem && !rowItem.builtin
+                onToggled: if (rowItem)
+                    root.backend.setTokenEnabled(root.selectedChainId, rowItem.address, checked)
             }
         }
     }
