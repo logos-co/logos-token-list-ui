@@ -10,7 +10,9 @@
   "main": "token_list_ui_plugin",
   "icon": "src/icons/token_list.png",
   "view": "qml/TokenListView.qml",
-  "dependencies": ["token_list_module"],
+  "dependencies": [
+    { "name": "token_list_module", "version": "~0.1.0" }
+  ],
   "provides": [
     { "intent": "evm.token_lists.configure", "handoff": true }
   ],
