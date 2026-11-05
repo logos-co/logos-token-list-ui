@@ -1,7 +1,7 @@
 {
   "name": "token_list_ui",
   "display_name": "Token Lists",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "ui_qml",
   "interface": "universal",
   "category": "wallet",
@@ -11,7 +11,7 @@
   "icon": "src/icons/token_list.png",
   "view": "qml/TokenListView.qml",
   "dependencies": [
-    { "name": "token_list_module", "version": "~0.1.0" }
+    { "name": "token_list_module", "version": "~0.2.0" }
   ],
   "provides": [
     { "intent": "evm.token_lists.configure", "handoff": true }

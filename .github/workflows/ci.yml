@@ -49,6 +49,16 @@ jobs:
       - name: Gate 0 — token membership stays in this app
         run: python3 doctests/assert_ui.py
 
+      - name: Find the logos-nix revision the builder pins
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Qt comes from the logos-nix the builder pins, as in the build; never the runner's nixpkgs.
+          nix=$(jq -r '.nodes as $n | ($n[.root].inputs["logos-module-builder"]) as $b
+                       | $n[$n[$b].inputs["logos-nix"]].locked.rev' flake.lock)
+          [[ "$nix" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::no logos-nix pin in flake.lock ($nix)"; exit 1; }
+          echo "QT=github:logos-co/logos-nix/$nix" >> "$GITHUB_ENV"
+
       # The design system is NOT a flake input: it is static-linked into the
       # host binary, so the plugin declares nothing. Its SOURCE tree is still
       # what qmllint needs to resolve Logos.* — checked out here rather than
@@ -75,14 +85,14 @@ jobs:
 
       - name: Gate A — static (imports, type and property names)
         run: |
-          nix shell nixpkgs#qt6.qtdeclarative -c bash -c '
+          nix shell "$QT#qt6.qtdeclarative" -c bash -c '
             QTQML=$(dirname $(dirname $(readlink -f $(command -v qmllint))))/lib/qt-6/qml
             qmllint -I "$QTQML" -I .design-system/src/qml \
                     -W 0 --unqualified disable src/qml/TokenListView.qml'
 
       - name: Gate B — instantiate every component for real
         run: |
-          nix shell nixpkgs#qt6.qtdeclarative nixpkgs#qt6.qtsvg -c bash -c '
+          nix shell "$QT#qt6.qtdeclarative" "$QT#qt6.qtsvg" -c bash -c '
             QTQML=$(dirname $(dirname $(readlink -f $(command -v qmllint))))/lib/qt-6/qml
             # Basic is load-bearing: under a platform style the design system'"'"'s
             # own contentItem overrides are REJECTED, which reads as a bug in
